@@ -21,6 +21,7 @@ router.post('/signup', async function (req, res) {
  const confirmemaildata = data['confirm-email'];
  const passworddata = data.password;
 if(!emaildata || !confirmemaildata || !passworddata || !passworddata.trim() < 6 || emaildata !== confirmemaildata || !emaildata.includes('@')){
+
   return res.redirect('signup')
 }
 const existinguser = await db.getDb().collection('users').findOne({email : emaildata})
@@ -53,13 +54,21 @@ router.post('/login', async function (req, res) {
   console.log('not matched pass')
   return res.redirect('/login');
  }
-
- console.log('logged in');
+ req.session.user = { id: existinguser._id.toString(), email: existinguser.email };
+req.session.isAuthenticated = true
+req.session.save( function(){
   res.redirect('/admin');
+})
+ 
 });
 
 router.get('/admin', function (req, res) {
-  res.render('admin');
+  if(!req.session.isAuthenticated){
+    return res.status(401).render('401');
+
+  }
+
+  return res.render('admin');
 });
 
 router.post('/logout', function (req, res) {});
