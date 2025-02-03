@@ -1,7 +1,7 @@
 const path = require('path');
 
 const express = require('express');
-
+const session = require('express-session')
 const db = require('./data/database');
 const demoRoutes = require('./routes/demo');
 
@@ -12,6 +12,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));
+app.use(session());
 
 app.use(demoRoutes);
 
