@@ -1,24 +1,19 @@
 const mongodb = require('mongodb');
-
 const MongoClient = mongodb.MongoClient;
-
 let database;
+async function connect() {
+  const client = await MongoClient.connect('mongodb+srv://muntahamirza890:dbMuntahaPass@mydb.bcxy0.mongodb.net/');
 
-async function connectToDatabase() {
-  const client = await MongoClient.connect(
-    'mongodb://localhost:27017'
-  );
   database = client.db('auth-demo');
-}
+  }
 
 function getDb() {
   if (!database) {
-    throw { message: 'You must connect first!' };
+    throw 'Database not connected!';
   }
   return database;
 }
-
 module.exports = {
-  connectToDatabase: connectToDatabase,
-  getDb: getDb,
+    connectToDatabase: connect,
+    getDb: getDb
 };
