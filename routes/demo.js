@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs')
 const db = require('../data/database');
+const session = require('express-session');
 const router = express.Router();
 
 router.get('/', function (req, res) {
@@ -8,7 +9,23 @@ router.get('/', function (req, res) {
 });
 
 router.get('/signup', function (req, res) {
-  res.render('signup');
+  let sessionInputData = req.session.inputData;
+  //For first time
+  if(!sessionInputData){
+sessionInputData={
+  hasError:false,
+  email:'',
+  confirmemail:'',
+  password:'',
+
+}
+
+  }
+  req.session.inputData = null; // Clear session data after first load
+
+    res.render('signup' ,{sessionInputData:sessionInputData});
+  
+  
 });
 
 router.get('/login', function (req, res) {
@@ -20,9 +37,20 @@ router.post('/signup', async function (req, res) {
  const emaildata =data.email;
  const confirmemaildata = data['confirm-email'];
  const passworddata = data.password;
-if(!emaildata || !confirmemaildata || !passworddata || !passworddata.trim() < 6 || emaildata !== confirmemaildata || !emaildata.includes('@')){
+if(!emaildata || !confirmemaildata || !passworddata || passworddata.trim().length < 6 || emaildata !== confirmemaildata || !emaildata.includes('@')){
 
-  return res.redirect('signup')
+  req.session.inputData = {
+    hasError: true,
+    message:'Invalid-Put',
+    email:emaildata,
+    confirmemail:confirmemaildata,
+    password:passworddata
+  }
+  req.session.save(function(){
+    return res.redirect('/signup')
+  })
+  return;//so will not go further return
+
 }
 const existinguser = await db.getDb().collection('users').findOne({email : emaildata})
 if(existinguser){
@@ -71,6 +99,10 @@ router.get('/admin', function (req, res) {
   return res.render('admin');
 });
 
-router.post('/logout', function (req, res) {});
+router.post('/logout', function (req, res) {
+  req.session.user = null;
+  req.session.isAuthenticated = false;
+  res.redirect('/');
+});
 
 module.exports = router;
