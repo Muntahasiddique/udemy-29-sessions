@@ -22,7 +22,15 @@ router.get('/signup', function (req, res) {
 });
 
 router.get('/login', function (req, res) {
-  res.render('login');
+  let sessionInputData = req.session.inputData || {
+    hasError: false,
+    email: '',
+    password: '',
+  };
+
+  req.session.inputData = null; // Clear session data after first load
+  res.render('login' ,{sessionInputData:sessionInputData} );
+
 });
 
 router.post('/signup', async function (req, res) {
@@ -45,8 +53,17 @@ router.post('/signup', async function (req, res) {
 
   const existinguser = await db.getDb().collection('users').findOne({ email: emaildata });
   if (existinguser) {
-    console.log('Email already exists');
-    return res.redirect('/signup');
+    req.session.inputData = {
+      hasError: true,
+      message: 'user exists',
+      email: emaildata,
+      confirmemail: confirmemaildata,
+      password: passworddata,
+    };
+    req.session.save(function(){
+      return res.redirect('/signup');
+    })
+   return;
   }
 
   const hashedpass = await bcrypt.hash(passworddata, 12);
@@ -62,14 +79,30 @@ router.post('/login', async function (req, res) {
 
   const existinguser = await db.getDb().collection('users').findOne({ email: emaildata });
   if (!existinguser) {
-    console.log('Cannot login');
-    return res.redirect('/login');
+    req.session.inputData = {
+      hasError: true,
+      message: 'check again credentials',
+      email: emaildata,
+      password: passworddata,
+    };
+    req.session.save(function(){
+      return res.redirect('/login');
+    })
+return;
   }
 
   const passwordequal = await bcrypt.compare(passworddata, existinguser.password);
   if (!passwordequal) {
-    console.log('Password does not match');
-    return res.redirect('/login');
+    req.session.inputData = {
+      hasError: true,
+      message: 'Check again your Credentials',
+      email: emaildata,
+      password: passworddata,
+    };
+    req.session.save(function(){
+      return res.redirect('/login');
+    })
+return;
   }
 
   req.session.user = { id: existinguser._id.toString(), email: existinguser.email };
@@ -78,13 +111,15 @@ router.post('/login', async function (req, res) {
 });
 
 router.get('/admin', async function (req, res) {
-  if (!req.session.isAuthenticated) {
+  //if (!req.session.isAuthenticated) { as Locals availabe Everywhere
+    if (!res.locals.isAuth) {
     return res.status(401).render('401');
   }
 
-  const user = await db.getDb().collection('users').findOne({ _id: new ObjectId(req.session.user.id) });
+  //const user = await db.getDb().collection('users').findOne({ _id: new ObjectId(req.session.user.id) });
 
-  if (!user || !user.isAdmin) {
+  //if (!user || !user.isAdmin) {
+    if (!res.locals.isAdmin) {
     return res.status(403).render('403');
   }
 
@@ -92,7 +127,8 @@ router.get('/admin', async function (req, res) {
 });
 
 router.get('/profile', function (req, res) {
-  if (!req.session.isAuthenticated) {
+ // if (!req.session.isAuthenticated) {
+    if (!res.locals.isAuth) {
     return res.status(401).render('401');
   }
   return res.render('profile'); // ✅ Fixed incorrect template
